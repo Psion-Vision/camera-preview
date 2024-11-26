@@ -9,6 +9,7 @@ import android.graphics.Color;
 import android.graphics.Point;
 import android.hardware.Camera;
 import android.util.DisplayMetrics;
+import android.util.Log;
 import android.util.TypedValue;
 import android.view.Display;
 import android.view.MotionEvent;
@@ -33,9 +34,7 @@ public class CameraPreview extends Plugin implements CameraActivity.CameraPrevie
 
     static final String CAMERA_PERMISSION_ALIAS = "camera";
 
-    private static String VIDEO_FILE_PATH = "";
     private static String VIDEO_FILE_EXTENSION = ".mp4";
-
     private String captureCallbackId = "";
     private String snapshotCallbackId = "";
     private String recordCallbackId = "";
@@ -69,7 +68,7 @@ public class CameraPreview extends Plugin implements CameraActivity.CameraPrevie
 
     @PluginMethod
     public void setOpacity(PluginCall call) {
-        if (this.hasCamera(call) == false) {
+        if (!this.hasCamera(call)) {
             call.error("Camera is not running");
             return;
         }
@@ -81,7 +80,7 @@ public class CameraPreview extends Plugin implements CameraActivity.CameraPrevie
 
     @PluginMethod
     public void capture(PluginCall call) {
-        if (this.hasCamera(call) == false) {
+        if (!this.hasCamera(call)) {
             call.reject("Camera is not running");
             return;
         }
@@ -97,7 +96,7 @@ public class CameraPreview extends Plugin implements CameraActivity.CameraPrevie
 
     @PluginMethod
     public void captureSample(PluginCall call) {
-        if (this.hasCamera(call) == false) {
+        if (!this.hasCamera(call)) {
             call.reject("Camera is not running");
             return;
         }
@@ -141,7 +140,7 @@ public class CameraPreview extends Plugin implements CameraActivity.CameraPrevie
 
     @PluginMethod
     public void getSupportedFlashModes(PluginCall call) {
-        if (this.hasCamera(call) == false) {
+        if (!this.hasCamera(call)) {
             call.reject("Camera is not running");
             return;
         }
@@ -154,7 +153,7 @@ public class CameraPreview extends Plugin implements CameraActivity.CameraPrevie
 
         if (supportedFlashModes != null) {
             for (int i = 0; i < supportedFlashModes.size(); i++) {
-                jsonFlashModes.put(new String(supportedFlashModes.get(i)));
+                jsonFlashModes.put(supportedFlashModes.get(i));
             }
         }
 
@@ -165,13 +164,13 @@ public class CameraPreview extends Plugin implements CameraActivity.CameraPrevie
 
     @PluginMethod
     public void setFlashMode(PluginCall call) {
-        if (this.hasCamera(call) == false) {
+        if (!this.hasCamera(call)) {
             call.reject("Camera is not running");
             return;
         }
 
         String flashMode = call.getString("flashMode");
-        if (flashMode == null || flashMode.isEmpty() == true) {
+        if (flashMode == null || flashMode.isEmpty()) {
             call.reject("flashMode required parameter is missing");
             return;
         }
@@ -195,12 +194,11 @@ public class CameraPreview extends Plugin implements CameraActivity.CameraPrevie
 
     @PluginMethod
     public void startRecordVideo(final PluginCall call) {
-        if (this.hasCamera(call) == false) {
+        if (!this.hasCamera(call)) {
             call.reject("Camera is not running");
             return;
         }
         final String filename = "videoTmp";
-        VIDEO_FILE_PATH = getActivity().getCacheDir().toString() + "/";
 
         final String position = call.getString("position", "front");
         final Integer width = call.getInt("width", 0);
@@ -228,7 +226,7 @@ public class CameraPreview extends Plugin implements CameraActivity.CameraPrevie
 
     @PluginMethod
     public void stopRecordVideo(PluginCall call) {
-        if (this.hasCamera(call) == false) {
+        if (!this.hasCamera(call)) {
             call.reject("Camera is not running");
             return;
         }
@@ -248,6 +246,52 @@ public class CameraPreview extends Plugin implements CameraActivity.CameraPrevie
         fragment.stopRecord();
         // call.resolve();
     }
+
+
+    @PluginMethod
+    public void setZoom(PluginCall call) {
+        if (!this.hasCamera(call)) {
+            call.error("Camera is not running");
+            return;
+        }
+
+        final Integer zoom = call.getInt("value", 0);
+
+        Camera camera = fragment.getCamera();
+        Camera.Parameters params = camera.getParameters();
+
+        if (params.isZoomSupported()) {
+            List<Integer> zoomRatios = params.getZoomRatios();
+            int maxZoom = params.getMaxZoom();
+
+            if (zoom >= 0 && zoom <= maxZoom) {
+                params.setZoom(zoom);
+                camera.setParameters(params);
+            }
+        }
+    }
+
+    @PluginMethod
+    public void setExposure(PluginCall call) {
+      if (!this.hasCamera(call)) {
+        call.error("Camera is not running");
+        return;
+      }
+
+      final Integer exposure = call.getInt("value", 1);
+
+      Camera camera = fragment.getCamera();
+      Camera.Parameters params = camera.getParameters();
+
+      int maxExposure = params.getMaxExposureCompensation();
+      int minExposure = params.getMinExposureCompensation();
+
+      if (exposure >= minExposure && exposure <= maxExposure) {
+        params.setExposureCompensation(exposure);
+        camera.setParameters(params);
+      }
+    }
+
 
     @PermissionCallback
     private void handleCameraPermissionResult(PluginCall call) {
@@ -279,6 +323,7 @@ public class CameraPreview extends Plugin implements CameraActivity.CameraPrevie
         final Boolean enableZoom = call.getBoolean("enableZoom", false);
         final Boolean disableExifHeaderStripping = call.getBoolean("disableExifHeaderStripping", true);
         final Boolean lockOrientation = call.getBoolean("lockAndroidOrientation", false);
+        final String storePath = call.getString("storePath", getActivity().getCacheDir().toString() + "/");
         previousOrientationRequest = getBridge().getActivity().getRequestedOrientation();
 
         fragment = new CameraActivity();
@@ -289,6 +334,7 @@ public class CameraPreview extends Plugin implements CameraActivity.CameraPrevie
         fragment.tapToFocus = true;
         fragment.disableExifHeaderStripping = disableExifHeaderStripping;
         fragment.storeToFile = storeToFile;
+        fragment.storePath = storePath;
         fragment.toBack = toBack;
         fragment.enableOpacity = enableOpacity;
         fragment.enableZoom = enableZoom;
@@ -452,7 +498,7 @@ public class CameraPreview extends Plugin implements CameraActivity.CameraPrevie
     }
 
     private boolean hasCamera(PluginCall call) {
-        if (this.hasView(call) == false) {
+        if (!this.hasView(call)) {
             return false;
         }
 
@@ -468,31 +514,31 @@ public class CameraPreview extends Plugin implements CameraActivity.CameraPrevie
 
         int i = 1;
 
-        while (new File(VIDEO_FILE_PATH + fileName + VIDEO_FILE_EXTENSION).exists()) {
+        while (new File(fragment.storePath + fileName + VIDEO_FILE_EXTENSION).exists()) {
             // Add number suffix if file exists
             fileName = filename + '_' + i;
             i++;
         }
 
-        return VIDEO_FILE_PATH + fileName + VIDEO_FILE_EXTENSION;
+        return fragment.storePath + fileName + VIDEO_FILE_EXTENSION;
     }
 
     private void setupBroadcast() {
         /** When touch event is triggered, relay it to camera view if needed so it can support pinch zoom */
 
-        getBridge().getWebView().setClickable(true);
-        getBridge()
-            .getWebView()
-            .setOnTouchListener(
-                new View.OnTouchListener() {
-                    @Override
-                    public boolean onTouch(View v, MotionEvent event) {
-                        if ((null != fragment) && (fragment.toBack == true)) {
-                            fragment.frameContainerLayout.dispatchTouchEvent(event);
-                        }
-                        return false;
-                    }
-                }
-            );
+//        getBridge().getWebView().setClickable(true);
+//        getBridge()
+//            .getWebView()
+//            .setOnTouchListener(
+//                new View.OnTouchListener() {
+//                    @Override
+//                    public boolean onTouch(View v, MotionEvent event) {
+//                        if ((null != fragment) && (fragment.toBack == true)) {
+//                            fragment.frameContainerLayout.dispatchTouchEvent(event);
+//                        }
+//                        return false;
+//                    }
+//                }
+//            );
     }
 }

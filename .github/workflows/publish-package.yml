@@ -1,0 +1,50 @@
+name: Publish Package
+
+# We want this to run every time we push to our main/production branch
+on:
+  push:
+    branches:
+      - master # Replace with the name of your main branch (e.g., 'main' or 'production')
+
+jobs:
+  publish-gpr:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'oracle'
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20 # Specify your node version
+          registry-url: https://npm.pkg.github.com/ # GitHub Packages registry URL
+          always-auth: true
+          scope: '@Psion-Vision'
+
+      - name: Install dependencies
+        run: npm install
+
+      # Enable this step if you have tests configured
+      # - name: Run tests
+      #   run: npm run test
+
+      - name: Verify the Android project
+        run: npm run verify:android
+
+      - name: Run Husky and build the project
+        run: npm run prepare
+
+      - name: Publish package
+        run: npm publish
+        env:
+          NODE_AUTH_TOKEN: ${{secrets.GITHUB_TOKEN}} #  Authentication token.

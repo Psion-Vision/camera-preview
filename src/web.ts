@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/ban-types */
 import { WebPlugin } from '@capacitor/core';
 
 import type {
@@ -24,6 +25,7 @@ export class CameraPreviewWeb extends WebPlugin implements CameraPreviewPlugin {
   }
 
   async start(options: CameraPreviewOptions): Promise<{}> {
+    // eslint-disable-next-line no-async-promise-executor
     return new Promise(async (resolve, reject) => {
       await navigator.mediaDevices
         .getUserMedia({
@@ -65,7 +67,7 @@ export class CameraPreviewWeb extends WebPlugin implements CameraPreviewPlugin {
 
         parent.appendChild(videoElement);
 
-        if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+        if (navigator.mediaDevices?.getUserMedia) {
           const constraints: MediaStreamConstraints = {
             video: {
               width: { ideal: options.width },
@@ -107,24 +109,24 @@ export class CameraPreviewWeb extends WebPlugin implements CameraPreviewPlugin {
   }
 
   async stop(): Promise<any> {
-    const video = <HTMLVideoElement>document.getElementById('video');
+    const video = document.getElementById('video') as HTMLVideoElement;
     if (video) {
       video.pause();
 
       const st: any = video.srcObject;
       const tracks = st.getTracks();
 
-      for (let i = 0; i < tracks.length; i++) {
-        const track = tracks[i];
+      for (const track of tracks) {
         track.stop();
       }
+
       video.remove();
     }
   }
 
   async capture(options: CameraPreviewPictureOptions): Promise<any> {
     return new Promise((resolve, _) => {
-      const video = <HTMLVideoElement>document.getElementById('video');
+      const video = document.getElementById('video') as HTMLVideoElement;
       const canvas = document.createElement('canvas');
 
       // video.width = video.offsetWidth;
@@ -166,6 +168,7 @@ export class CameraPreviewWeb extends WebPlugin implements CameraPreviewPlugin {
     throw new Error('getSupportedFlashModes not supported under the web platform');
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   async setFlashMode(_options: { flashMode: CameraPreviewFlashMode | string }): Promise<void> {
     throw new Error('setFlashMode not supported under the web platform');
   }
@@ -175,9 +178,17 @@ export class CameraPreviewWeb extends WebPlugin implements CameraPreviewPlugin {
   }
 
   async setOpacity(_options: CameraOpacityOptions): Promise<any> {
-    const video = <HTMLVideoElement>document.getElementById('video');
+    const video = document.getElementById('video') as HTMLVideoElement;
     if (!!video && !!_options['opacity']) {
       video.style.setProperty('opacity', _options['opacity'].toString());
     }
+  }
+
+  async setZoom(): Promise<{}> {
+    throw this.unimplemented('Not implemented on web.');
+  }
+
+  async setExposure(): Promise<{}> {
+    throw this.unimplemented('Not implemented on web.');
   }
 }

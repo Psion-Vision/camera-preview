@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/ban-types */
 export type CameraPosition = 'rear' | 'front';
 export interface CameraPreviewOptions {
   /** Parent element to attach the video preview element to (applicable to the web platform only) */
@@ -34,6 +35,8 @@ export interface CameraPreviewOptions {
   enableOpacity?: boolean;
   /** Defaults to false - Android only.  Set if camera preview will support pinch to zoom. */
   enableZoom?: boolean;
+
+  storePath?: string;
 }
 export interface CameraPreviewPictureOptions {
   /** The picture height, optional, default 0 (Device default) */
@@ -71,4 +74,6 @@ export interface CameraPreviewPlugin {
   setFlashMode(options: { flashMode: CameraPreviewFlashMode | string }): Promise<void>;
   flip(): Promise<void>;
   setOpacity(options: CameraOpacityOptions): Promise<{}>;
+  setZoom(options: { value: number }): Promise<{}>;
+  setExposure(options: { value: number }): Promise<{}>;
 }

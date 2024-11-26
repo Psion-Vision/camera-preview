@@ -97,6 +97,7 @@ public class CameraActivity extends Fragment {
     public boolean tapToFocus;
     public boolean disableExifHeaderStripping;
     public boolean storeToFile;
+    public String storePath;
     public boolean toBack;
     public boolean enableOpacity = false;
     public boolean enableZoom = false;
@@ -521,8 +522,18 @@ public class CameraActivity extends Fragment {
         return cache.getAbsolutePath();
     }
 
-    private String getTempFilePath() {
-        return getTempDirectoryPath() + "/cpcp_capture_" + UUID.randomUUID().toString().replace("-", "").substring(0, 8) + ".jpg";
+    private String getFilePath(String filename) {
+        String fileName = filename;
+
+        int i = 1;
+
+        while (new File(storePath + fileName + ".jpeg").exists()) {
+            // Add number suffix if file exists
+            fileName = filename + '_' + i;
+            i++;
+        }
+
+        return storePath + fileName + ".jpeg";
     }
 
     PictureCallback jpegPictureCallback = new PictureCallback() {
@@ -560,7 +571,7 @@ public class CameraActivity extends Fragment {
 
                     eventListener.onPictureTaken(encodedImage);
                 } else {
-                    String path = getTempFilePath();
+                    String path = getFilePath("photoTmp");
                     FileOutputStream out = new FileOutputStream(path);
                     out.write(data);
                     out.close();
@@ -740,7 +751,11 @@ public class CameraActivity extends Fragment {
         );
     }
 
-    public void takePicture(final int width, final int height, final int quality) {
+    public void takePicture(
+        final int width,
+        final int height,
+        final int quality
+    ) {
         Log.d(TAG, "CameraPreview takePicture width: " + width + ", height: " + height + ", quality: " + quality);
 
         if (mPreview != null) {
