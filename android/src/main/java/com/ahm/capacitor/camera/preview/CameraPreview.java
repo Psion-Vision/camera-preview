@@ -46,6 +46,8 @@ public class CameraPreview extends Plugin implements CameraActivity.CameraPrevie
     private CameraActivity fragment;
     private int containerViewId = 20;
 
+    private boolean isCameraRunning = false;
+
     @PluginMethod
     public void start(PluginCall call) {
         if (PermissionState.GRANTED.equals(getPermissionState(CAMERA_PERMISSION_ALIAS))) {
@@ -129,6 +131,7 @@ public class CameraPreview extends Plugin implements CameraActivity.CameraPrevie
                             fragmentTransaction.commit();
                             fragment = null;
 
+                            isCameraRunning = false; // Reset the flag
                             call.resolve();
                         } else {
                             call.reject("camera already stopped");
@@ -247,7 +250,6 @@ public class CameraPreview extends Plugin implements CameraActivity.CameraPrevie
         // call.resolve();
     }
 
-
     @PluginMethod
     public void setZoom(PluginCall call) {
         if (!this.hasCamera(call)) {
@@ -273,25 +275,24 @@ public class CameraPreview extends Plugin implements CameraActivity.CameraPrevie
 
     @PluginMethod
     public void setExposure(PluginCall call) {
-      if (!this.hasCamera(call)) {
-        call.error("Camera is not running");
-        return;
-      }
+        if (!this.hasCamera(call)) {
+            call.error("Camera is not running");
+            return;
+        }
 
-      final Integer exposure = call.getInt("value", 1);
+        final Integer exposure = call.getInt("value", 1);
 
-      Camera camera = fragment.getCamera();
-      Camera.Parameters params = camera.getParameters();
+        Camera camera = fragment.getCamera();
+        Camera.Parameters params = camera.getParameters();
 
-      int maxExposure = params.getMaxExposureCompensation();
-      int minExposure = params.getMinExposureCompensation();
+        int maxExposure = params.getMaxExposureCompensation();
+        int minExposure = params.getMinExposureCompensation();
 
-      if (exposure >= minExposure && exposure <= maxExposure) {
-        params.setExposureCompensation(exposure);
-        camera.setParameters(params);
-      }
+        if (exposure >= minExposure && exposure <= maxExposure) {
+            params.setExposureCompensation(exposure);
+            camera.setParameters(params);
+        }
     }
-
 
     @PermissionCallback
     private void handleCameraPermissionResult(PluginCall call) {
@@ -304,6 +305,13 @@ public class CameraPreview extends Plugin implements CameraActivity.CameraPrevie
     }
 
     private void startCamera(final PluginCall call) {
+        if (isCameraRunning) {
+            call.reject("Camera is already running");
+            return;
+        }
+
+        isCameraRunning = true; // Set this when starting the camera
+
         String position = call.getString("position");
 
         if (position == null || position.isEmpty() || "rear".equals(position)) {
@@ -526,19 +534,19 @@ public class CameraPreview extends Plugin implements CameraActivity.CameraPrevie
     private void setupBroadcast() {
         /** When touch event is triggered, relay it to camera view if needed so it can support pinch zoom */
 
-//        getBridge().getWebView().setClickable(true);
-//        getBridge()
-//            .getWebView()
-//            .setOnTouchListener(
-//                new View.OnTouchListener() {
-//                    @Override
-//                    public boolean onTouch(View v, MotionEvent event) {
-//                        if ((null != fragment) && (fragment.toBack == true)) {
-//                            fragment.frameContainerLayout.dispatchTouchEvent(event);
-//                        }
-//                        return false;
-//                    }
-//                }
-//            );
+        //        getBridge().getWebView().setClickable(true);
+        //        getBridge()
+        //            .getWebView()
+        //            .setOnTouchListener(
+        //                new View.OnTouchListener() {
+        //                    @Override
+        //                    public boolean onTouch(View v, MotionEvent event) {
+        //                        if ((null != fragment) && (fragment.toBack == true)) {
+        //                            fragment.frameContainerLayout.dispatchTouchEvent(event);
+        //                        }
+        //                        return false;
+        //                    }
+        //                }
+        //            );
     }
 }
